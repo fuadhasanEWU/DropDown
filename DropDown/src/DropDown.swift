@@ -44,47 +44,52 @@ extension UIBarButtonItem: AnchorView {
 
 /// A Material Design drop down in replacement for `UIPickerView`.
 public final class DropDown: UIView {
-
-	//TODO: handle iOS 7 landscape mode
-
-	/// The dismiss mode for a drop down.
-	public enum DismissMode {
-
-		/// A tap outside the drop down is required to dismiss.
-		case onTap
-
-		/// No tap is required to dismiss, it will dimiss when interacting with anything else.
-		case automatic
-
-		/// Not dismissable by the user.
-		case manual
-
-	}
-
-	/// The direction where the drop down will show from the `anchorView`.
-	public enum Direction {
-
-		/// The drop down will show below the anchor view when possible, otherwise above if there is more place than below.
-		case any
-
-		/// The drop down will show above the anchor view or will not be showed if not enough space.
-		case top
-
-		/// The drop down will show below or will not be showed if not enough space.
-		case bottom
-
-	}
-
-	//MARK: - Properties
-
-	/// The current visible drop down. There can be only one visible drop down at a time.
-	public static weak var VisibleDropDown: DropDown?
-
-	//MARK: UI
-	fileprivate let dismissableView = UIView()
-	fileprivate let tableViewContainer = UIView()
-	fileprivate let tableView = UITableView()
-	fileprivate var templateCell: DropDownCell!
+    
+    public var maxVisibleItems: Int = 5 {
+        didSet {
+            self.setNeedsUpdateConstraints()
+        }
+    }
+    //TODO: handle iOS 7 landscape mode
+    
+    /// The dismiss mode for a drop down.
+    public enum DismissMode {
+        
+        /// A tap outside the drop down is required to dismiss.
+        case onTap
+        
+        /// No tap is required to dismiss, it will dimiss when interacting with anything else.
+        case automatic
+        
+        /// Not dismissable by the user.
+        case manual
+        
+    }
+    
+    /// The direction where the drop down will show from the `anchorView`.
+    public enum Direction {
+        
+        /// The drop down will show below the anchor view when possible, otherwise above if there is more place than below.
+        case any
+        
+        /// The drop down will show above the anchor view or will not be showed if not enough space.
+        case top
+        
+        /// The drop down will show below or will not be showed if not enough space.
+        case bottom
+        
+    }
+    
+    //MARK: - Properties
+    
+    /// The current visible drop down. There can be only one visible drop down at a time.
+    public static weak var VisibleDropDown: DropDown?
+    
+    //MARK: UI
+    fileprivate let dismissableView = UIView()
+    fileprivate let tableViewContainer = UIView()
+    fileprivate let tableView = UITableView()
+    fileprivate var templateCell: DropDownCell!
     fileprivate lazy var arrowIndication: UIImageView = {
         UIGraphicsBeginImageContextWithOptions(CGSize(width: 20, height: 10), false, 0)
         let path = UIBezierPath()
@@ -101,239 +106,239 @@ public final class DropDown: UIView {
         imgv.frame = CGRect(x: 0, y: -10, width: 15, height: 10)
         return imgv
     }()
-
-
-	/// The view to which the drop down will displayed onto.
-	public weak var anchorView: AnchorView? {
-		didSet { setNeedsUpdateConstraints() }
-	}
-
-	/**
-	The possible directions where the drop down will be showed.
-
-	See `Direction` enum for more info.
-	*/
-	public var direction = Direction.any
-
-	/**
-	The offset point relative to `anchorView` when the drop down is shown above the anchor view.
-
-	By default, the drop down is showed onto the `anchorView` with the top
-	left corner for its origin, so an offset equal to (0, 0).
-	You can change here the default drop down origin.
-	*/
-	public var topOffset: CGPoint = .zero {
-		didSet { setNeedsUpdateConstraints() }
-	}
-
-	/**
-	The offset point relative to `anchorView` when the drop down is shown below the anchor view.
-
-	By default, the drop down is showed onto the `anchorView` with the top
-	left corner for its origin, so an offset equal to (0, 0).
-	You can change here the default drop down origin.
-	*/
-	public var bottomOffset: CGPoint = .zero {
-		didSet { setNeedsUpdateConstraints() }
-	}
-
+    
+    
+    /// The view to which the drop down will displayed onto.
+    public weak var anchorView: AnchorView? {
+        didSet { setNeedsUpdateConstraints() }
+    }
+    
     /**
-    The offset from the bottom of the window when the drop down is shown below the anchor view.
-    DropDown applies this offset only if keyboard is hidden.
-    */
+     The possible directions where the drop down will be showed.
+     
+     See `Direction` enum for more info.
+     */
+    public var direction = Direction.any
+    
+    /**
+     The offset point relative to `anchorView` when the drop down is shown above the anchor view.
+     
+     By default, the drop down is showed onto the `anchorView` with the top
+     left corner for its origin, so an offset equal to (0, 0).
+     You can change here the default drop down origin.
+     */
+    public var topOffset: CGPoint = .zero {
+        didSet { setNeedsUpdateConstraints() }
+    }
+    
+    /**
+     The offset point relative to `anchorView` when the drop down is shown below the anchor view.
+     
+     By default, the drop down is showed onto the `anchorView` with the top
+     left corner for its origin, so an offset equal to (0, 0).
+     You can change here the default drop down origin.
+     */
+    public var bottomOffset: CGPoint = .zero {
+        didSet { setNeedsUpdateConstraints() }
+    }
+    
+    /**
+     The offset from the bottom of the window when the drop down is shown below the anchor view.
+     DropDown applies this offset only if keyboard is hidden.
+     */
     public var offsetFromWindowBottom = CGFloat(0) {
         didSet { setNeedsUpdateConstraints() }
     }
     
-	/**
-	The width of the drop down.
-
-	Defaults to `anchorView.bounds.width - offset.x`.
-	*/
-	public var width: CGFloat? {
-		didSet { setNeedsUpdateConstraints() }
-	}
-
-	/**
-	arrowIndication.x
-
-	arrowIndication will be add to tableViewContainer when configured
-	*/
-	public var arrowIndicationX: CGFloat? {
-		didSet {
-			if let arrowIndicationX = arrowIndicationX {
-				tableViewContainer.addSubview(arrowIndication)
-				arrowIndication.tintColor = tableViewBackgroundColor
-				arrowIndication.frame.origin.x = arrowIndicationX
-			} else {
-				arrowIndication.removeFromSuperview()
-			}
-		}
-	}
-
-	//MARK: Constraints
-	fileprivate var heightConstraint: NSLayoutConstraint!
-	fileprivate var widthConstraint: NSLayoutConstraint!
-	fileprivate var xConstraint: NSLayoutConstraint!
-	fileprivate var yConstraint: NSLayoutConstraint!
-
-	//MARK: Appearance
-	@objc public dynamic var cellHeight = DPDConstant.UI.RowHeight {
-		willSet { tableView.rowHeight = newValue }
-		didSet { reloadAllComponents() }
-	}
-
-	@objc fileprivate dynamic var tableViewBackgroundColor = DPDConstant.UI.BackgroundColor {
-		willSet {
+    /**
+     The width of the drop down.
+     
+     Defaults to `anchorView.bounds.width - offset.x`.
+     */
+    public var width: CGFloat? {
+        didSet { setNeedsUpdateConstraints() }
+    }
+    
+    /**
+     arrowIndication.x
+     
+     arrowIndication will be add to tableViewContainer when configured
+     */
+    public var arrowIndicationX: CGFloat? {
+        didSet {
+            if let arrowIndicationX = arrowIndicationX {
+                tableViewContainer.addSubview(arrowIndication)
+                arrowIndication.tintColor = tableViewBackgroundColor
+                arrowIndication.frame.origin.x = arrowIndicationX
+            } else {
+                arrowIndication.removeFromSuperview()
+            }
+        }
+    }
+    
+    //MARK: Constraints
+    fileprivate var heightConstraint: NSLayoutConstraint!
+    fileprivate var widthConstraint: NSLayoutConstraint!
+    fileprivate var xConstraint: NSLayoutConstraint!
+    fileprivate var yConstraint: NSLayoutConstraint!
+    
+    //MARK: Appearance
+    @objc public dynamic var cellHeight = DPDConstant.UI.RowHeight {
+        willSet { tableView.rowHeight = newValue }
+        didSet { reloadAllComponents() }
+    }
+    
+    @objc fileprivate dynamic var tableViewBackgroundColor = DPDConstant.UI.BackgroundColor {
+        willSet {
             tableView.backgroundColor = newValue
             if arrowIndicationX != nil { arrowIndication.tintColor = newValue }
         }
-	}
-
-	public override var backgroundColor: UIColor? {
-		get { return tableViewBackgroundColor }
-		set { tableViewBackgroundColor = newValue! }
-	}
-
-	/**
-	The color of the dimmed background (behind the drop down, covering the entire screen).
-	*/
-	public var dimmedBackgroundColor = UIColor.clear {
-		willSet { super.backgroundColor = newValue }
-	}
-
-	/**
-	The background color of the selected cell in the drop down.
-
-	Changing the background color automatically reloads the drop down.
-	*/
-	@objc public dynamic var selectionBackgroundColor = DPDConstant.UI.SelectionBackgroundColor
-
-	/**
-	The separator color between cells.
-
-	Changing the separator color automatically reloads the drop down.
-	*/
-	@objc public dynamic var separatorColor = DPDConstant.UI.SeparatorColor {
-		willSet { tableView.separatorColor = newValue }
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	The corner radius of DropDown.
-
-	Changing the corner radius automatically reloads the drop down.
-	*/
-	@objc public dynamic var cornerRadius = DPDConstant.UI.CornerRadius {
-		willSet {
-			tableViewContainer.layer.cornerRadius = newValue
-			tableView.layer.cornerRadius = newValue
-		}
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	Alias method for `cornerRadius` variable to avoid ambiguity.
-	*/
-	@objc public dynamic func setupCornerRadius(_ radius: CGFloat) {
-		tableViewContainer.layer.cornerRadius = radius
-		tableView.layer.cornerRadius = radius
-		reloadAllComponents()
-	}
-
-	/**
-	The masked corners of DropDown.
-
-	Changing the masked corners automatically reloads the drop down.
-	*/
-	@available(iOS 11.0, *)
-	@objc public dynamic func setupMaskedCorners(_ cornerMask: CACornerMask) {
-		tableViewContainer.layer.maskedCorners = cornerMask
-		tableView.layer.maskedCorners = cornerMask
-		reloadAllComponents()
-	}
-
-	/**
-	The color of the shadow.
-
-	Changing the shadow color automatically reloads the drop down.
-	*/
-	@objc public dynamic var shadowColor = DPDConstant.UI.Shadow.Color {
-		willSet { tableViewContainer.layer.shadowColor = newValue.cgColor }
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	The offset of the shadow.
-
-	Changing the shadow color automatically reloads the drop down.
-	*/
-	@objc public dynamic var shadowOffset = DPDConstant.UI.Shadow.Offset {
-		willSet { tableViewContainer.layer.shadowOffset = newValue }
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	The opacity of the shadow.
-
-	Changing the shadow opacity automatically reloads the drop down.
-	*/
-	@objc public dynamic var shadowOpacity = DPDConstant.UI.Shadow.Opacity {
-		willSet { tableViewContainer.layer.shadowOpacity = newValue }
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	The radius of the shadow.
-
-	Changing the shadow radius automatically reloads the drop down.
-	*/
-	@objc public dynamic var shadowRadius = DPDConstant.UI.Shadow.Radius {
-		willSet { tableViewContainer.layer.shadowRadius = newValue }
-		didSet { reloadAllComponents() }
-	}
-
-	/**
-	The duration of the show/hide animation.
-	*/
-	@objc public dynamic var animationduration = DPDConstant.Animation.Duration
-
-	/**
-	The option of the show animation. Global change.
-	*/
-	public static var animationEntranceOptions = DPDConstant.Animation.EntranceOptions
-	
-	/**
-	The option of the hide animation. Global change.
-	*/
-	public static var animationExitOptions = DPDConstant.Animation.ExitOptions
-	
-	/**
-	The option of the show animation. Only change the caller. To change all drop down's use the static var.
-	*/
-	public var animationEntranceOptions: UIView.AnimationOptions = DropDown.animationEntranceOptions
-	
-	/**
-	The option of the hide animation. Only change the caller. To change all drop down's use the static var.
-	*/
-	public var animationExitOptions: UIView.AnimationOptions = DropDown.animationExitOptions
-
-	/**
-	The downScale transformation of the tableview when the DropDown is appearing
-	*/
-	public var downScaleTransform = DPDConstant.Animation.DownScaleTransform {
-		willSet { tableViewContainer.transform = newValue }
-	}
-
-	/**
-	The color of the text for each cells of the drop down.
-
-	Changing the text color automatically reloads the drop down.
-	*/
-	@objc public dynamic var textColor = DPDConstant.UI.TextColor {
-		didSet { reloadAllComponents() }
-	}
-
+    }
+    
+    public override var backgroundColor: UIColor? {
+        get { return tableViewBackgroundColor }
+        set { tableViewBackgroundColor = newValue! }
+    }
+    
+    /**
+     The color of the dimmed background (behind the drop down, covering the entire screen).
+     */
+    public var dimmedBackgroundColor = UIColor.clear {
+        willSet { super.backgroundColor = newValue }
+    }
+    
+    /**
+     The background color of the selected cell in the drop down.
+     
+     Changing the background color automatically reloads the drop down.
+     */
+    @objc public dynamic var selectionBackgroundColor = DPDConstant.UI.SelectionBackgroundColor
+    
+    /**
+     The separator color between cells.
+     
+     Changing the separator color automatically reloads the drop down.
+     */
+    @objc public dynamic var separatorColor = DPDConstant.UI.SeparatorColor {
+        willSet { tableView.separatorColor = newValue }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     The corner radius of DropDown.
+     
+     Changing the corner radius automatically reloads the drop down.
+     */
+    @objc public dynamic var cornerRadius = DPDConstant.UI.CornerRadius {
+        willSet {
+            tableViewContainer.layer.cornerRadius = newValue
+            tableView.layer.cornerRadius = newValue
+        }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     Alias method for `cornerRadius` variable to avoid ambiguity.
+     */
+    @objc public dynamic func setupCornerRadius(_ radius: CGFloat) {
+        tableViewContainer.layer.cornerRadius = radius
+        tableView.layer.cornerRadius = radius
+        reloadAllComponents()
+    }
+    
+    /**
+     The masked corners of DropDown.
+     
+     Changing the masked corners automatically reloads the drop down.
+     */
+    @available(iOS 11.0, *)
+    @objc public dynamic func setupMaskedCorners(_ cornerMask: CACornerMask) {
+        tableViewContainer.layer.maskedCorners = cornerMask
+        tableView.layer.maskedCorners = cornerMask
+        reloadAllComponents()
+    }
+    
+    /**
+     The color of the shadow.
+     
+     Changing the shadow color automatically reloads the drop down.
+     */
+    @objc public dynamic var shadowColor = DPDConstant.UI.Shadow.Color {
+        willSet { tableViewContainer.layer.shadowColor = newValue.cgColor }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     The offset of the shadow.
+     
+     Changing the shadow color automatically reloads the drop down.
+     */
+    @objc public dynamic var shadowOffset = DPDConstant.UI.Shadow.Offset {
+        willSet { tableViewContainer.layer.shadowOffset = newValue }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     The opacity of the shadow.
+     
+     Changing the shadow opacity automatically reloads the drop down.
+     */
+    @objc public dynamic var shadowOpacity = DPDConstant.UI.Shadow.Opacity {
+        willSet { tableViewContainer.layer.shadowOpacity = newValue }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     The radius of the shadow.
+     
+     Changing the shadow radius automatically reloads the drop down.
+     */
+    @objc public dynamic var shadowRadius = DPDConstant.UI.Shadow.Radius {
+        willSet { tableViewContainer.layer.shadowRadius = newValue }
+        didSet { reloadAllComponents() }
+    }
+    
+    /**
+     The duration of the show/hide animation.
+     */
+    @objc public dynamic var animationduration = DPDConstant.Animation.Duration
+    
+    /**
+     The option of the show animation. Global change.
+     */
+    public static var animationEntranceOptions = DPDConstant.Animation.EntranceOptions
+    
+    /**
+     The option of the hide animation. Global change.
+     */
+    public static var animationExitOptions = DPDConstant.Animation.ExitOptions
+    
+    /**
+     The option of the show animation. Only change the caller. To change all drop down's use the static var.
+     */
+    public var animationEntranceOptions: UIView.AnimationOptions = DropDown.animationEntranceOptions
+    
+    /**
+     The option of the hide animation. Only change the caller. To change all drop down's use the static var.
+     */
+    public var animationExitOptions: UIView.AnimationOptions = DropDown.animationExitOptions
+    
+    /**
+     The downScale transformation of the tableview when the DropDown is appearing
+     */
+    public var downScaleTransform = DPDConstant.Animation.DownScaleTransform {
+        willSet { tableViewContainer.transform = newValue }
+    }
+    
+    /**
+     The color of the text for each cells of the drop down.
+     
+     Changing the text color automatically reloads the drop down.
+     */
+    @objc public dynamic var textColor = DPDConstant.UI.TextColor {
+        didSet { reloadAllComponents() }
+    }
+    
     /**
      The color of the text for selected cells of the drop down.
      
@@ -343,75 +348,75 @@ public final class DropDown: UIView {
         didSet { reloadAllComponents() }
     }
     
-	/**
-	The font of the text for each cells of the drop down.
-
-	Changing the text font automatically reloads the drop down.
-	*/
-	@objc public dynamic var textFont = DPDConstant.UI.TextFont {
-		didSet { reloadAllComponents() }
-	}
+    /**
+     The font of the text for each cells of the drop down.
+     
+     Changing the text font automatically reloads the drop down.
+     */
+    @objc public dynamic var textFont = DPDConstant.UI.TextFont {
+        didSet { reloadAllComponents() }
+    }
     
     /**
      The NIB to use for DropDownCells
      
      Changing the cell nib automatically reloads the drop down.
      */
-	public var cellNib = UINib(nibName: "DropDownCell", bundle: bundle) {
-		didSet {
-			tableView.register(cellNib, forCellReuseIdentifier: DPDConstant.ReusableIdentifier.DropDownCell)
-			templateCell = nil
-			reloadAllComponents()
-		}
-	}
-
-  /// Correctly specify Bundle for Swift Packages
-  fileprivate static var bundle: Bundle {
-    #if SWIFT_PACKAGE
-    return Bundle.module
-    #else
-    return Bundle(for: DropDownCell.self)
-    #endif
-  }
-	
-	//MARK: Content
-
-	/**
-	The data source for the drop down.
-
-	Changing the data source automatically reloads the drop down.
-	*/
-	public var dataSource = [String]() {
-		didSet {
+    public var cellNib = UINib(nibName: "DropDownCell", bundle: bundle) {
+        didSet {
+            tableView.register(cellNib, forCellReuseIdentifier: DPDConstant.ReusableIdentifier.DropDownCell)
+            templateCell = nil
+            reloadAllComponents()
+        }
+    }
+    
+    /// Correctly specify Bundle for Swift Packages
+    fileprivate static var bundle: Bundle {
+#if SWIFT_PACKAGE
+        return Bundle.module
+#else
+        return Bundle(for: DropDownCell.self)
+#endif
+    }
+    
+    //MARK: Content
+    
+    /**
+     The data source for the drop down.
+     
+     Changing the data source automatically reloads the drop down.
+     */
+    public var dataSource = [String]() {
+        didSet {
             deselectRows(at: selectedRowIndices)
-			reloadAllComponents()
-		}
-	}
-
-	/**
-	The localization keys for the data source for the drop down.
-
-	Changing this value automatically reloads the drop down.
-	This has uses for setting accibility identifiers on the drop down cells (same ones as the localization keys).
-	*/
-	public var localizationKeysDataSource = [String]() {
-		didSet {
-			dataSource = localizationKeysDataSource.map { NSLocalizedString($0, comment: "") }
-		}
-	}
-
-	/// The indicies that have been selected
-	fileprivate var selectedRowIndices = Set<Index>()
-
-	/**
-	The format for the cells' text.
-
-	By default, the cell's text takes the plain `dataSource` value.
-	Changing `cellConfiguration` automatically reloads the drop down.
-	*/
-	public var cellConfiguration: ConfigurationClosure? {
-		didSet { reloadAllComponents() }
-	}
+            reloadAllComponents()
+        }
+    }
+    
+    /**
+     The localization keys for the data source for the drop down.
+     
+     Changing this value automatically reloads the drop down.
+     This has uses for setting accibility identifiers on the drop down cells (same ones as the localization keys).
+     */
+    public var localizationKeysDataSource = [String]() {
+        didSet {
+            dataSource = localizationKeysDataSource.map { NSLocalizedString($0, comment: "") }
+        }
+    }
+    
+    /// The indicies that have been selected
+    fileprivate var selectedRowIndices = Set<Index>()
+    
+    /**
+     The format for the cells' text.
+     
+     By default, the cell's text takes the plain `dataSource` value.
+     Changing `cellConfiguration` automatically reloads the drop down.
+     */
+    public var cellConfiguration: ConfigurationClosure? {
+        didSet { reloadAllComponents() }
+    }
     
     /**
      A advanced formatter for the cells. Allows customization when custom cells are used
@@ -421,93 +426,93 @@ public final class DropDown: UIView {
     public var customCellConfiguration: CellConfigurationClosure? {
         didSet { reloadAllComponents() }
     }
-
-	/// The action to execute when the user selects a cell.
-	public var selectionAction: SelectionClosure?
+    
+    /// The action to execute when the user selects a cell.
+    public var selectionAction: SelectionClosure?
     
     /**
-    The action to execute when the user selects multiple cells.
-    
-    Providing an action will turn on multiselection mode.
-    The single selection action will still be called if provided.
-    */
+     The action to execute when the user selects multiple cells.
+     
+     Providing an action will turn on multiselection mode.
+     The single selection action will still be called if provided.
+     */
     public var multiSelectionAction: MultiSelectionClosure?
-
-	/// The action to execute when the drop down will show.
-	public var willShowAction: Closure?
-
-	/// The action to execute when the user cancels/hides the drop down.
-	public var cancelAction: Closure?
-
-	/// The dismiss mode of the drop down. Default is `OnTap`.
-	public var dismissMode = DismissMode.onTap {
-		willSet {
-			if newValue == .onTap {
-				let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dismissableViewTapped))
-				dismissableView.addGestureRecognizer(gestureRecognizer)
-			} else if let gestureRecognizer = dismissableView.gestureRecognizers?.first {
-				dismissableView.removeGestureRecognizer(gestureRecognizer)
-			}
-		}
-	}
-
-	fileprivate var minHeight: CGFloat {
-		return tableView.rowHeight
-	}
-
-	fileprivate var didSetupConstraints = false
-
-	//MARK: - Init's
-
-	deinit {
-		stopListeningToNotifications()
-	}
-
-	/**
-	Creates a new instance of a drop down.
-	Don't forget to setup the `dataSource`,
-	the `anchorView` and the `selectionAction`
-	at least before calling `show()`.
-	*/
-	public convenience init() {
-		self.init(frame: .zero)
-	}
-
-	/**
-	Creates a new instance of a drop down.
-
-	- parameter anchorView:        The view to which the drop down will displayed onto.
-	- parameter selectionAction:   The action to execute when the user selects a cell.
-	- parameter dataSource:        The data source for the drop down.
-	- parameter topOffset:         The offset point relative to `anchorView` used when drop down is displayed on above the anchor view.
-	- parameter bottomOffset:      The offset point relative to `anchorView` used when drop down is displayed on below the anchor view.
-	- parameter cellConfiguration: The format for the cells' text.
-	- parameter cancelAction:      The action to execute when the user cancels/hides the drop down.
-
-	- returns: A new instance of a drop down customized with the above parameters.
-	*/
-	public convenience init(anchorView: AnchorView, selectionAction: SelectionClosure? = nil, dataSource: [String] = [], topOffset: CGPoint? = nil, bottomOffset: CGPoint? = nil, cellConfiguration: ConfigurationClosure? = nil, cancelAction: Closure? = nil) {
-		self.init(frame: .zero)
-
-		self.anchorView = anchorView
-		self.selectionAction = selectionAction
-		self.dataSource = dataSource
-		self.topOffset = topOffset ?? .zero
-		self.bottomOffset = bottomOffset ?? .zero
-		self.cellConfiguration = cellConfiguration
-		self.cancelAction = cancelAction
-	}
-
-	override public init(frame: CGRect) {
-		super.init(frame: frame)
-		setup()
-	}
-
-	public required init?(coder aDecoder: NSCoder) {
-		super.init(coder: aDecoder)
-		setup()
-	}
-
+    
+    /// The action to execute when the drop down will show.
+    public var willShowAction: Closure?
+    
+    /// The action to execute when the user cancels/hides the drop down.
+    public var cancelAction: Closure?
+    
+    /// The dismiss mode of the drop down. Default is `OnTap`.
+    public var dismissMode = DismissMode.onTap {
+        willSet {
+            if newValue == .onTap {
+                let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(dismissableViewTapped))
+                dismissableView.addGestureRecognizer(gestureRecognizer)
+            } else if let gestureRecognizer = dismissableView.gestureRecognizers?.first {
+                dismissableView.removeGestureRecognizer(gestureRecognizer)
+            }
+        }
+    }
+    
+    fileprivate var minHeight: CGFloat {
+        return tableView.rowHeight
+    }
+    
+    fileprivate var didSetupConstraints = false
+    
+    //MARK: - Init's
+    
+    deinit {
+        stopListeningToNotifications()
+    }
+    
+    /**
+     Creates a new instance of a drop down.
+     Don't forget to setup the `dataSource`,
+     the `anchorView` and the `selectionAction`
+     at least before calling `show()`.
+     */
+    public convenience init() {
+        self.init(frame: .zero)
+    }
+    
+    /**
+     Creates a new instance of a drop down.
+     
+     - parameter anchorView:        The view to which the drop down will displayed onto.
+     - parameter selectionAction:   The action to execute when the user selects a cell.
+     - parameter dataSource:        The data source for the drop down.
+     - parameter topOffset:         The offset point relative to `anchorView` used when drop down is displayed on above the anchor view.
+     - parameter bottomOffset:      The offset point relative to `anchorView` used when drop down is displayed on below the anchor view.
+     - parameter cellConfiguration: The format for the cells' text.
+     - parameter cancelAction:      The action to execute when the user cancels/hides the drop down.
+     
+     - returns: A new instance of a drop down customized with the above parameters.
+     */
+    public convenience init(anchorView: AnchorView, selectionAction: SelectionClosure? = nil, dataSource: [String] = [], topOffset: CGPoint? = nil, bottomOffset: CGPoint? = nil, cellConfiguration: ConfigurationClosure? = nil, cancelAction: Closure? = nil) {
+        self.init(frame: .zero)
+        
+        self.anchorView = anchorView
+        self.selectionAction = selectionAction
+        self.dataSource = dataSource
+        self.topOffset = topOffset ?? .zero
+        self.bottomOffset = bottomOffset ?? .zero
+        self.cellConfiguration = cellConfiguration
+        self.cancelAction = cancelAction
+    }
+    
+    override public init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+    
+    public required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        setup()
+    }
+    
 }
 
 //MARK: - Setup
@@ -559,35 +564,63 @@ private extension DropDown {
 
 extension DropDown {
 
-	public override func updateConstraints() {
-		if !didSetupConstraints {
-			setupConstraints()
-		}
-
-		didSetupConstraints = true
-
-		let layout = computeLayout()
-
-		if !layout.canBeDisplayed {
-			super.updateConstraints()
-			hide()
-
-			return
-		}
-
-		xConstraint.constant = layout.x
-		yConstraint.constant = layout.y
-		widthConstraint.constant = layout.width
-		heightConstraint.constant = layout.visibleHeight
-
-		tableView.isScrollEnabled = layout.offscreenHeight > 0
-
-		DispatchQueue.main.async { [weak self] in
-			self?.tableView.flashScrollIndicators()
-		}
-
-		super.updateConstraints()
-	}
+    public override func updateConstraints() {
+        if !didSetupConstraints {
+            setupConstraints()
+        }
+        
+        didSetupConstraints = true
+        
+        let layout = computeLayout()
+        
+        if !layout.canBeDisplayed {
+            super.updateConstraints()
+            hide()
+            
+            return
+        }
+        
+        xConstraint.constant = layout.x
+        yConstraint.constant = layout.y
+        widthConstraint.constant = layout.width
+        heightConstraint.constant = layout.visibleHeight
+        
+        tableView.isScrollEnabled = layout.offscreenHeight > 0 || dataSource.count > maxVisibleItems
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.tableView.flashScrollIndicators()
+        }
+        
+        super.updateConstraints()
+        
+        //		if !didSetupConstraints {
+        //			setupConstraints()
+        //		}
+        //
+        //		didSetupConstraints = true
+        //
+        //		let layout = computeLayout()
+        //
+        //		if !layout.canBeDisplayed {
+        //			super.updateConstraints()
+        //			hide()
+        //
+        //			return
+        //		}
+        //
+        //		xConstraint.constant = layout.x
+        //		yConstraint.constant = layout.y
+        //		widthConstraint.constant = layout.width
+        //		heightConstraint.constant = layout.visibleHeight
+        //
+        //		tableView.isScrollEnabled = layout.offscreenHeight > 0
+        //
+        //		DispatchQueue.main.async { [weak self] in
+        //			self?.tableView.flashScrollIndicators()
+        //		}
+        //
+        //		super.updateConstraints()
+    }
 
 	fileprivate func setupConstraints() {
 		translatesAutoresizingMaskIntoConstraints = false
@@ -1030,7 +1063,9 @@ extension DropDown {
 
 	/// Returns the height needed to display all cells.
 	fileprivate var tableHeight: CGFloat {
-		return tableView.rowHeight * CGFloat(dataSource.count)
+        let visibleItemsCount = min(dataSource.count, maxVisibleItems)
+        return tableView.rowHeight * CGFloat(visibleItemsCount)
+		//return tableView.rowHeight * CGFloat(dataSource.count)
 	}
 
     //MARK: Objective-C methods for converting the Swift type Index
